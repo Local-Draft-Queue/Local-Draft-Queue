@@ -42,6 +42,7 @@ It is not yet designed for:
 ```text
 .
 ├── README.md
+├── setup.sh
 ├── run-dev.sh
 ├── config/
 │   ├── prompt-skill.json
@@ -128,6 +129,7 @@ Validation currently checks:
 - Retry flow for failed generations
 - Local Markdown artifact output for success and failure cases
 - WordPress draft creation via application passwords
+- One-command dependency bootstrap with `./setup.sh`
 - One-command local startup with `./run-dev.sh`
 
 ## Prerequisites
@@ -238,10 +240,29 @@ You can manage this file from the `/skills` page in the UI.
 
 ## Installation
 
-### Python worker
+### Fast bootstrap
+
+From the repo root:
 
 ```bash
-cd /python-worker
+cd /Users/jeff/Desktop/dev/auto
+./setup.sh
+```
+
+What it does:
+- creates missing local config files
+- creates `python-worker/.venv` if needed
+- installs Python dependencies
+- installs Next.js dependencies
+- creates missing local env files with placeholder values
+- attempts to pull `qwen2.5-coder:1.5b` if Ollama is installed
+
+It does not overwrite your existing local config files.
+
+### Manual Python worker
+
+```bash
+cd /Users/jeff/Desktop/dev/auto/python-worker
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -250,7 +271,7 @@ pip install -r requirements.txt
 ### Next.js app
 
 ```bash
-cd /nextjs-app
+cd /Users/jeff/Desktop/dev/auto/nextjs-app
 npm install
 ```
 
@@ -261,7 +282,8 @@ npm install
 From the repo root:
 
 ```bash
-cd 
+cd /Users/jeff/Desktop/dev/auto
+./setup.sh
 ./run-dev.sh
 ```
 
@@ -276,7 +298,7 @@ What the script does:
 Worker:
 
 ```bash
-cd /python-worker
+cd /Users/jeff/Desktop/dev/auto/python-worker
 set -a
 source .env
 set +a
@@ -287,7 +309,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 Frontend:
 
 ```bash
-cd /nextjs-app
+cd /Users/jeff/Desktop/dev/auto/nextjs-app
 npm run dev
 ```
 
@@ -308,14 +330,15 @@ Worker:
 ## Typical Workflow
 
 1. Start Ollama.
-2. Start the app with `./run-dev.sh`.
-3. Add one or more sites in `/sites`.
-4. Adjust the writing skill in `/skills` if needed.
-5. Create a task in `/dashboard`.
-6. Open `/queue`.
-7. Click `Generate Draft`.
-8. Review the task result and the generated Markdown artifact.
-9. Open the WordPress draft link if generation succeeded.
+2. Run `./setup.sh` if this is a fresh clone.
+3. Start the app with `./run-dev.sh`.
+4. Add one or more sites in `/sites`.
+5. Adjust the writing skill in `/skills` if needed.
+6. Create a task in `/dashboard`.
+7. Open `/queue`.
+8. Click `Generate Draft`.
+9. Review the task result and the generated Markdown artifact.
+10. Open the WordPress draft link if generation succeeded.
 
 ## Output Artifacts
 

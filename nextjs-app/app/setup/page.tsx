@@ -222,9 +222,17 @@ UI_AUTH_PASSWORD=change-this-to-a-strong-password`} />
           <div className="panel-header">
             <div>
               <p className="eyebrow">9. Run Locally</p>
-              <h2>Install dependencies and start the stack</h2>
+              <h2>Bootstrap dependencies and start the stack</h2>
             </div>
           </div>
+          <p className="muted">Fast bootstrap from the repo root:</p>
+          <SetupCodeBlock code={`cd /Users/jeff/Desktop/dev/auto
+./setup.sh`} />
+          <p className="setup-note">
+            <code>./setup.sh</code> creates missing local config files, prepares the worker
+            virtual environment, installs Python and Next.js dependencies, and tries to pull
+            the required Ollama model when Ollama is available.
+          </p>
           <p className="muted">Install worker dependencies:</p>
           <SetupCodeBlock code={`cd /Users/jeff/Desktop/dev/auto/python-worker
 python3 -m venv .venv
