@@ -70,8 +70,9 @@ export function SetupManager({ initialConfig, authConfigured }: SetupManagerProp
 
         <div className="skill-notes">
           <p>
-            Configure Ollama and OpenAI side by side below, then choose which provider should
-            handle generation. Switching providers does not enable fallback behind the scenes.
+            Choose the active provider below and the form will only show that provider's
+            settings to keep the page compact. Switching providers does not enable fallback
+            behind the scenes.
           </p>
           <p>
             Site credentials and prompt instructions stay in their existing UI pages, but their
@@ -125,61 +126,63 @@ export function SetupManager({ initialConfig, authConfigured }: SetupManagerProp
           </label>
         </div>
 
-        <div className="settings-section">
-          <h3>Ollama</h3>
-          <label>
-            <span>Ollama Base URL</span>
-            <input
-              value={form.ollamaBaseUrl}
-              onChange={(event) => updateField("ollamaBaseUrl", event.target.value)}
-              placeholder="http://localhost:11434"
-              required
-            />
-          </label>
+        {form.aiProvider === "ollama" ? (
+          <div className="settings-section">
+            <h3>Ollama</h3>
+            <label>
+              <span>Ollama Base URL</span>
+              <input
+                value={form.ollamaBaseUrl}
+                onChange={(event) => updateField("ollamaBaseUrl", event.target.value)}
+                placeholder="http://localhost:11434"
+                required
+              />
+            </label>
 
-          <label>
-            <span>Ollama Model</span>
-            <input
-              value={form.ollamaModel}
-              onChange={(event) => updateField("ollamaModel", event.target.value)}
-              placeholder="qwen2.5-coder:1.5b"
-              required
-            />
-          </label>
-        </div>
+            <label>
+              <span>Ollama Model</span>
+              <input
+                value={form.ollamaModel}
+                onChange={(event) => updateField("ollamaModel", event.target.value)}
+                placeholder="qwen2.5-coder:1.5b"
+                required
+              />
+            </label>
+          </div>
+        ) : (
+          <div className="settings-section">
+            <h3>OpenAI</h3>
+            <label>
+              <span>OpenAI API Key</span>
+              <input
+                type="password"
+                value={form.openAiApiKey}
+                onChange={(event) => updateField("openAiApiKey", event.target.value)}
+                placeholder="sk-..."
+              />
+            </label>
 
-        <div className="settings-section">
-          <h3>OpenAI</h3>
-          <label>
-            <span>OpenAI API Key</span>
-            <input
-              type="password"
-              value={form.openAiApiKey}
-              onChange={(event) => updateField("openAiApiKey", event.target.value)}
-              placeholder="sk-..."
-            />
-          </label>
+            <label>
+              <span>OpenAI Base URL</span>
+              <input
+                value={form.openAiBaseUrl}
+                onChange={(event) => updateField("openAiBaseUrl", event.target.value)}
+                placeholder="https://api.openai.com/v1"
+                required
+              />
+            </label>
 
-          <label>
-            <span>OpenAI Base URL</span>
-            <input
-              value={form.openAiBaseUrl}
-              onChange={(event) => updateField("openAiBaseUrl", event.target.value)}
-              placeholder="https://api.openai.com/v1"
-              required
-            />
-          </label>
-
-          <label>
-            <span>OpenAI Model</span>
-            <input
-              value={form.openAiModel}
-              onChange={(event) => updateField("openAiModel", event.target.value)}
-              placeholder="gpt-4o-mini"
-              required
-            />
-          </label>
-        </div>
+            <label>
+              <span>OpenAI Model</span>
+              <input
+                value={form.openAiModel}
+                onChange={(event) => updateField("openAiModel", event.target.value)}
+                placeholder="gpt-4o-mini"
+                required
+              />
+            </label>
+          </div>
+        )}
 
         <div className="settings-section">
           <h3>Shared Project Paths</h3>
