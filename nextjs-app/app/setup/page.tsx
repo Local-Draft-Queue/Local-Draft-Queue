@@ -149,9 +149,9 @@ UI_AUTH_PASSWORD=change-this-to-a-strong-password`} />
           </p>
           <SetupCodeBlock code={`OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=qwen2.5-coder:1.5b
-WP_SITES_FILE=/Users/jeff/Desktop/dev/auto/config/wp-sites.json
-DRAFT_OUTPUT_DIR=/Users/jeff/Desktop/dev/auto/generated-drafts
-PROMPT_SKILL_FILE=/Users/jeff/Desktop/dev/auto/config/prompt-skill.json`} />
+WP_SITES_FILE=/config/wp-sites.json
+DRAFT_OUTPUT_DIR=/generated-drafts
+PROMPT_SKILL_FILE=/config/prompt-skill.json`} />
           <p className="setup-note">
             <code>WP_SITES_FILE</code> and <code>PROMPT_SKILL_FILE</code> point both apps to the same shared local
             config files.
@@ -226,7 +226,7 @@ UI_AUTH_PASSWORD=change-this-to-a-strong-password`} />
             </div>
           </div>
           <p className="muted">Fast bootstrap from the repo root:</p>
-          <SetupCodeBlock code={`cd /Users/jeff/Desktop/dev/auto
+          <SetupCodeBlock code={`cd 
 ./setup.sh`} />
           <p className="setup-note">
             <code>./setup.sh</code> creates missing local config files, prepares the worker
@@ -234,15 +234,15 @@ UI_AUTH_PASSWORD=change-this-to-a-strong-password`} />
             the required Ollama model when Ollama is available.
           </p>
           <p className="muted">Install worker dependencies:</p>
-          <SetupCodeBlock code={`cd /Users/jeff/Desktop/dev/auto/python-worker
+          <SetupCodeBlock code={`cd /python-worker
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt`} />
           <p className="muted">Install frontend dependencies:</p>
-          <SetupCodeBlock code={`cd /Users/jeff/Desktop/dev/auto/nextjs-app
+          <SetupCodeBlock code={`cd /nextjs-app
 npm install`} />
           <p className="muted">Start everything in one command:</p>
-          <SetupCodeBlock code={`cd /Users/jeff/Desktop/dev/auto
+          <SetupCodeBlock code={`cd 
 ./run-dev.sh`} />
           <p className="setup-note">
             The launcher stops old dev processes on ports <code>8000</code>, <code>3000</code>, and <code>3001</code>, clears
