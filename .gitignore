@@ -1,0 +1,13 @@
+nextjs-app/.next
+nextjs-app/node_modules
+nextjs-app/.env.local
+python-worker/.venv
+python-worker/.env
+python-worker/__pycache__
+python-worker/.pytest_cache
+python-worker/app/__pycache__
+python-worker/app/clients/__pycache__
+python-worker/app/services/__pycache__
+*.pyc
+config/wp-sites.json
+generated-drafts/
