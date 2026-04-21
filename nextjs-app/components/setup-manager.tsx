@@ -70,8 +70,8 @@ export function SetupManager({ initialConfig, authConfigured }: SetupManagerProp
 
         <div className="skill-notes">
           <p>
-            Choose Ollama for local generation, switch to OpenAI directly, or keep Ollama as
-            the primary provider and enable OpenAI fallback when the local model is unavailable.
+            Configure Ollama and OpenAI side by side below, then choose which provider should
+            handle generation. Switching providers does not enable fallback behind the scenes.
           </p>
           <p>
             Site credentials and prompt instructions stay in their existing UI pages, but their
@@ -114,7 +114,7 @@ export function SetupManager({ initialConfig, authConfigured }: SetupManagerProp
         <div className="settings-section">
           <h3>AI Provider</h3>
           <label>
-            <span>Primary Provider</span>
+            <span>Active Provider</span>
             <select
               value={form.aiProvider}
               onChange={(event) => updateField("aiProvider", event.target.value as RuntimeConfig["aiProvider"])}
@@ -122,15 +122,6 @@ export function SetupManager({ initialConfig, authConfigured }: SetupManagerProp
               <option value="ollama">Ollama</option>
               <option value="openai">OpenAI</option>
             </select>
-          </label>
-
-          <label className="toggle-row">
-            <span>Use OpenAI if Ollama fails</span>
-            <input
-              type="checkbox"
-              checked={form.enableOpenAiFallback}
-              onChange={(event) => updateField("enableOpenAiFallback", event.target.checked)}
-            />
           </label>
         </div>
 

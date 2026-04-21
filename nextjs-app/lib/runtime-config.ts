@@ -19,10 +19,6 @@ const LEGACY_PATH_MIGRATIONS: Record<string, string> = {
 
 let writeQueue: Promise<unknown> = Promise.resolve();
 
-function parseBoolean(value: string | undefined): boolean {
-  return value?.trim().toLowerCase() === "true";
-}
-
 function toPortablePath(value: string): string {
   return value.split(path.sep).join("/");
 }
@@ -75,18 +71,17 @@ function normalizeRuntimeConfig(config: RuntimeConfig): RuntimeConfig {
 function buildDefaultRuntimeConfig(): RuntimeConfig {
   return normalizeRuntimeConfig(
     runtimeConfigSchema.parse({
-    uiAuthPassword: process.env.UI_AUTH_PASSWORD?.trim() ?? "",
-    pythonServiceUrl: process.env.PYTHON_SERVICE_URL?.trim() || "http://127.0.0.1:8000",
-    aiProvider: process.env.AI_PROVIDER?.trim() === "openai" ? "openai" : "ollama",
-    enableOpenAiFallback: parseBoolean(process.env.ENABLE_OPENAI_FALLBACK),
-    ollamaBaseUrl: process.env.OLLAMA_BASE_URL?.trim() || "http://localhost:11434",
-    ollamaModel: process.env.OLLAMA_MODEL?.trim() || "qwen2.5-coder:1.5b",
-    openAiApiKey: process.env.OPENAI_API_KEY?.trim() ?? "",
-    openAiBaseUrl: process.env.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1",
-    openAiModel: process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini",
-    wpSitesFile: process.env.WP_SITES_FILE?.trim() || DEFAULT_WP_SITES_FILE,
-    draftOutputDir: process.env.DRAFT_OUTPUT_DIR?.trim() || DEFAULT_DRAFT_OUTPUT_DIR,
-    promptSkillFile: process.env.PROMPT_SKILL_FILE?.trim() || DEFAULT_PROMPT_SKILL_FILE,
+      uiAuthPassword: process.env.UI_AUTH_PASSWORD?.trim() ?? "",
+      pythonServiceUrl: process.env.PYTHON_SERVICE_URL?.trim() || "http://127.0.0.1:8000",
+      aiProvider: process.env.AI_PROVIDER?.trim() === "openai" ? "openai" : "ollama",
+      ollamaBaseUrl: process.env.OLLAMA_BASE_URL?.trim() || "http://localhost:11434",
+      ollamaModel: process.env.OLLAMA_MODEL?.trim() || "qwen2.5-coder:1.5b",
+      openAiApiKey: process.env.OPENAI_API_KEY?.trim() ?? "",
+      openAiBaseUrl: process.env.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1",
+      openAiModel: process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini",
+      wpSitesFile: process.env.WP_SITES_FILE?.trim() || DEFAULT_WP_SITES_FILE,
+      draftOutputDir: process.env.DRAFT_OUTPUT_DIR?.trim() || DEFAULT_DRAFT_OUTPUT_DIR,
+      promptSkillFile: process.env.PROMPT_SKILL_FILE?.trim() || DEFAULT_PROMPT_SKILL_FILE,
     }),
   );
 }

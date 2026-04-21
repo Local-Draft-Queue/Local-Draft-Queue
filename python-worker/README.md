@@ -3,7 +3,7 @@
 FastAPI worker that:
 
 1. accepts a blog task
-2. generates a strict JSON draft via Ollama
+2. generates a strict JSON draft via the selected AI provider
 3. validates the result
 4. creates a WordPress draft
 

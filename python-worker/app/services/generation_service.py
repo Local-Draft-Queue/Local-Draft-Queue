@@ -17,14 +17,10 @@ class DraftGenerationService:
     def __init__(self, settings: Settings):
         self._settings = settings
 
-    def _build_model_clients(self) -> list[DraftModelClient]:
+    def _build_model_client(self) -> DraftModelClient:
         if self._settings.ai_provider == "openai":
-            return [OpenAIClient(self._settings)]
-
-        clients: list[DraftModelClient] = [OllamaClient(self._settings)]
-        if self._settings.enable_openai_fallback and self._settings.openai_api_key.strip():
-            clients.append(OpenAIClient(self._settings))
-        return clients
+            return OpenAIClient(self._settings)
+        return OllamaClient(self._settings)
 
     async def _generate_validated_draft(
         self,
@@ -56,27 +52,16 @@ class DraftGenerationService:
         return validated, generated_snapshot
 
     async def run(self, task: GenerateDraftRequest) -> GenerateDraftResponse:
-        model_clients: list[DraftModelClient] = []
+        model_client: Optional[DraftModelClient] = None
         wordpress: Optional[WordPressClient] = None
         draft_writer = MarkdownArtifactWriter(self._settings)
         generated_snapshot: Optional[GeneratedDraft] = None
         artifact_path: Optional[str] = None
-        generation_errors: list[str] = []
 
         try:
-            model_clients = self._build_model_clients()
+            model_client = self._build_model_client()
             wordpress = WordPressClient(self._settings)
-            validated: Optional[GeneratedDraft] = None
-
-            for client in model_clients:
-                try:
-                    validated, generated_snapshot = await self._generate_validated_draft(client, task)
-                    break
-                except ModelGenerationError as exc:
-                    generation_errors.append(str(exc))
-
-            if validated is None:
-                raise RuntimeError(" | ".join(generation_errors) or "No model client could generate a valid draft.")
+            validated, generated_snapshot = await self._generate_validated_draft(model_client, task)
 
             generated_snapshot = validated
             artifact_path = await draft_writer.write_success(task, validated)
@@ -100,7 +85,7 @@ class DraftGenerationService:
                 error_message=str(exc),
             )
         finally:
-            for client in model_clients:
-                await client.close()
+            if model_client is not None:
+                await model_client.close()
             if wordpress is not None:
                 await wordpress.close()

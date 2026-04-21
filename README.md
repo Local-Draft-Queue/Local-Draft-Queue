@@ -1,12 +1,12 @@
 # Local Draft Queue
 
-Local Draft Queue is a local-first content operations app for teams or solo publishers who want to turn article ideas into WordPress drafts with either a local Ollama model or an OpenAI model.
+Local Draft Queue is a local-first content operations app for teams or solo publishers who want to turn article ideas into WordPress drafts with either Ollama or OpenAI.
 
 Current pipeline:
 
-`Next.js UI -> Next.js API routes -> FastAPI worker -> Ollama or OpenAI -> validation -> local .md artifact -> WordPress draft`
+`Next.js UI -> Next.js API routes -> FastAPI worker -> selected AI provider -> validation -> local .md artifact -> WordPress draft`
 
-This repo is built around a practical constraint: the default model is `qwen2.5-coder:1.5b`, which is small, code-oriented, and not consistently reliable for long-form structured writing. The worker compensates for that with strict prompting, JSON extraction, validation, one retry, and deterministic fallback expansion.
+This repo is built around a practical constraint: the default Ollama model is `qwen2.5-coder:1.5b`, which is small, code-oriented, and not consistently reliable for long-form structured writing. The worker compensates for that with strict prompting, JSON extraction, validation, one retry, and deterministic fallback expansion. OpenAI is configured as a separate provider, not as an automatic fallback.
 
 ## What It Does
 
@@ -14,7 +14,7 @@ This repo is built around a practical constraint: the default model is `qwen2.5-
 - Save reusable WordPress site credentials locally so you do not re-enter them for every task.
 - Edit the active writing prompt skill from the UI instead of changing Python code.
 - Queue tasks and generate drafts on demand.
-- Configure auth, worker URLs, model providers, and fallback behavior from the `/setup` UI.
+- Configure auth, worker URLs, and both AI providers from the `/setup` UI.
 - Force JSON-only model output from the active model provider.
 - Strip non-JSON wrapper text if the model adds noise.
 - Validate draft structure and content quality before sending anything to WordPress.
@@ -97,7 +97,7 @@ The generation and publishing worker.
 
 ## Reliability Strategy For Small Models
 
-The worker assumes Ollama output is untrusted.
+The worker assumes model output is untrusted, especially when using smaller local models.
 
 Current safeguards:
 - prompt requires JSON-only output
@@ -138,13 +138,16 @@ Validation currently checks:
 - Node.js 20+ recommended
 - npm
 - Python 3.10+ recommended
-- Ollama installed locally
+- Ollama installed locally if you plan to use the Ollama provider
+- OpenAI API key if you plan to use the OpenAI provider
 - WordPress site(s) with REST API access
 - WordPress application password(s)
 
-## Model Requirement
+## Provider Setup
 
-This project is configured around:
+### Ollama
+
+Default local model:
 
 ```text
 qwen2.5-coder:1.5b
@@ -162,13 +165,23 @@ Make sure Ollama is available at:
 http://localhost:11434
 ```
 
+### OpenAI
+
+If you choose OpenAI in `/setup`, provide:
+
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL` if you are not using the standard API endpoint
+- `OPENAI_MODEL`
+
+The app stores both provider configs side by side, and the `AI_PROVIDER` setting decides which one is active for generation.
+
 ## Configuration
 
 Open `/setup` in the UI to manage the shared runtime settings. The app writes these values to [config/runtime-settings.json](/config/runtime-settings.json), and both the Next.js app and the Python worker read from that file on demand.
 
 For portability, keep the shared content paths repo-relative, for example `config/wp-sites.json`, `generated-drafts`, and `config/prompt-skill.json`, instead of machine-specific absolute paths.
 
-You can still provide environment variables as a fallback, but the preferred local workflow is the `/setup` page.
+You can still provide environment variables as an alternate configuration path, but the preferred local workflow is the `/setup` page.
 
 ### 1. Shared runtime settings
 
@@ -177,7 +190,6 @@ The settings UI manages:
 - `UI_AUTH_PASSWORD`
 - `PYTHON_SERVICE_URL`
 - `AI_PROVIDER`
-- `ENABLE_OPENAI_FALLBACK`
 - `OLLAMA_BASE_URL`
 - `OLLAMA_MODEL`
 - `OPENAI_API_KEY`
@@ -186,6 +198,8 @@ The settings UI manages:
 - `WP_SITES_FILE`
 - `DRAFT_OUTPUT_DIR`
 - `PROMPT_SKILL_FILE`
+
+`AI_PROVIDER` selects exactly one provider for generation. The app does not automatically fall back from Ollama to OpenAI.
 
 ### 2. WordPress site registry
 
@@ -230,7 +244,7 @@ Example structure:
 {
   "name": "Default SEO Blog Skill",
   "enabled": true,
-  "description": "Base long-form SEO and readability guidance injected into Ollama prompts.",
+  "description": "Base long-form SEO and readability guidance injected into generation prompts.",
   "instructions": "- Use a polished, confident, human-friendly tone.\n- Rewrite the title to be engaging and SEO-friendly."
 }
 ```
@@ -328,10 +342,10 @@ Worker:
 
 ## Typical Workflow
 
-1. Start Ollama if you are using the Ollama provider.
+1. Start Ollama if `AI_PROVIDER` is set to `ollama`.
 2. Run `./setup.sh` if this is a fresh clone.
 3. Start the app with `./run-dev.sh`.
-4. Open `/setup` and save your runtime settings, or confirm the existing values.
+4. Open `/setup`, configure Ollama and OpenAI side by side if needed, and choose the active provider.
 5. Add one or more sites in `/sites`.
 6. Adjust the writing skill in `/skills` if needed.
 7. Create a task in `/dashboard`.

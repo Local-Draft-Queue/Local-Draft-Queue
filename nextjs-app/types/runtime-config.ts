@@ -4,7 +4,6 @@ export interface RuntimeConfig {
   uiAuthPassword: string;
   pythonServiceUrl: string;
   aiProvider: AiProvider;
-  enableOpenAiFallback: boolean;
   ollamaBaseUrl: string;
   ollamaModel: string;
   openAiApiKey: string;

@@ -12,7 +12,6 @@ from app.models import PromptSkillConfig, WordPressSiteConfig
 
 class Settings(BaseModel):
     ai_provider: Literal["ollama", "openai"]
-    enable_openai_fallback: bool = False
     ollama_base_url: str
     ollama_model: str
     openai_api_key: str = ""
@@ -48,11 +47,6 @@ LEGACY_PATH_MIGRATIONS = {
     "/prompt-skill.json": DEFAULT_PROMPT_SKILL_FILE_PATH,
     "/config/prompt-skill.json": DEFAULT_PROMPT_SKILL_FILE_PATH,
 }
-
-
-def _parse_bool(raw_value: str | None) -> bool:
-    return (raw_value or "").strip().lower() == "true"
-
 
 def _normalize_stored_path(raw_value: str | None, fallback: str) -> str:
     trimmed = (raw_value or "").strip()
@@ -202,10 +196,6 @@ def get_settings() -> Settings:
         or os.getenv("OPENAI_MODEL", "").strip()
         or "gpt-4o-mini"
     )
-    enable_openai_fallback = (
-        bool(runtime_settings.get("enableOpenAiFallback"))
-        or _parse_bool(os.getenv("ENABLE_OPENAI_FALLBACK"))
-    )
 
     if not ollama_base_url:
         ollama_base_url = "http://localhost:11434"
@@ -217,7 +207,6 @@ def get_settings() -> Settings:
 
     return Settings(
         ai_provider=ai_provider,
-        enable_openai_fallback=enable_openai_fallback,
         ollama_base_url=ollama_base_url.rstrip("/"),
         ollama_model=ollama_model,
         openai_api_key=openai_api_key,
