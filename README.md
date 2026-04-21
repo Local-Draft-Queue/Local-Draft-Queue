@@ -245,7 +245,7 @@ You can manage this file from the `/skills` page in the UI.
 From the repo root:
 
 ```bash
-cd /Users/jeff/Desktop/dev/auto
+cd 
 ./setup.sh
 ```
 
@@ -262,7 +262,7 @@ It does not overwrite your existing local config files.
 ### Manual Python worker
 
 ```bash
-cd /Users/jeff/Desktop/dev/auto/python-worker
+cd /python-worker
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -271,7 +271,7 @@ pip install -r requirements.txt
 ### Next.js app
 
 ```bash
-cd /Users/jeff/Desktop/dev/auto/nextjs-app
+cd /nextjs-app
 npm install
 ```
 
@@ -282,7 +282,7 @@ npm install
 From the repo root:
 
 ```bash
-cd /Users/jeff/Desktop/dev/auto
+cd 
 ./setup.sh
 ./run-dev.sh
 ```
@@ -298,7 +298,7 @@ What the script does:
 Worker:
 
 ```bash
-cd /Users/jeff/Desktop/dev/auto/python-worker
+cd /python-worker
 set -a
 source .env
 set +a
@@ -309,7 +309,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 Frontend:
 
 ```bash
-cd /Users/jeff/Desktop/dev/auto/nextjs-app
+cd /nextjs-app
 npm run dev
 ```
 
