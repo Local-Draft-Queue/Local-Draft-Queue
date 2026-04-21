@@ -1,10 +1,10 @@
 # Local Draft Queue
 
-Local Draft Queue is a local-first content operations app for teams or solo publishers who want to turn article ideas into WordPress drafts with a local Ollama model.
+Local Draft Queue is a local-first content operations app for teams or solo publishers who want to turn article ideas into WordPress drafts with either a local Ollama model or an OpenAI model.
 
 Current pipeline:
 
-`Next.js UI -> Next.js API routes -> FastAPI worker -> Ollama -> validation -> local .md artifact -> WordPress draft`
+`Next.js UI -> Next.js API routes -> FastAPI worker -> Ollama or OpenAI -> validation -> local .md artifact -> WordPress draft`
 
 This repo is built around a practical constraint: the default model is `qwen2.5-coder:1.5b`, which is small, code-oriented, and not consistently reliable for long-form structured writing. The worker compensates for that with strict prompting, JSON extraction, validation, one retry, and deterministic fallback expansion.
 
@@ -12,9 +12,10 @@ This repo is built around a practical constraint: the default model is `qwen2.5-
 
 - Create blog tasks from a web UI.
 - Save reusable WordPress site credentials locally so you do not re-enter them for every task.
-- Edit the active Ollama prompt skill from the UI instead of changing Python code.
+- Edit the active writing prompt skill from the UI instead of changing Python code.
 - Queue tasks and generate drafts on demand.
-- Force JSON-only model output from Ollama.
+- Configure auth, worker URLs, model providers, and fallback behavior from the `/setup` UI.
+- Force JSON-only model output from the active model provider.
 - Strip non-JSON wrapper text if the model adds noise.
 - Validate draft structure and content quality before sending anything to WordPress.
 - Save a local Markdown artifact for each generation attempt.
@@ -88,7 +89,7 @@ The generation and publishing worker.
 
 - `GET /health`
 - `POST /generate-draft`
-- Calls Ollama
+- Calls the configured model provider
 - Extracts and parses JSON safely
 - Validates content
 - Writes draft artifacts to `generated-drafts/`
@@ -163,32 +164,30 @@ http://localhost:11434
 
 ## Configuration
 
-The repo does not currently ship committed `.env.example` files. Create the following local env files yourself.
+Open `/setup` in the UI to manage the shared runtime settings. The app writes these values to [config/runtime-settings.json](/config/runtime-settings.json), and both the Next.js app and the Python worker read from that file on demand.
 
-### 1. Next.js env
+For portability, keep the shared content paths repo-relative, for example `config/wp-sites.json`, `generated-drafts`, and `config/prompt-skill.json`, instead of machine-specific absolute paths.
 
-Create [nextjs-app/.env.local](/nextjs-app/.env.local):
+You can still provide environment variables as a fallback, but the preferred local workflow is the `/setup` page.
 
-```env
-PYTHON_SERVICE_URL=http://127.0.0.1:8000
-UI_AUTH_PASSWORD=change-this-password
-```
+### 1. Shared runtime settings
 
-### 2. Python worker env
+The settings UI manages:
 
-Create [python-worker/.env](/python-worker/.env):
+- `UI_AUTH_PASSWORD`
+- `PYTHON_SERVICE_URL`
+- `AI_PROVIDER`
+- `ENABLE_OPENAI_FALLBACK`
+- `OLLAMA_BASE_URL`
+- `OLLAMA_MODEL`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_MODEL`
+- `WP_SITES_FILE`
+- `DRAFT_OUTPUT_DIR`
+- `PROMPT_SKILL_FILE`
 
-```env
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5-coder:1.5b
-WP_SITES_FILE=/config/wp-sites.json
-DRAFT_OUTPUT_DIR=/generated-drafts
-PROMPT_SKILL_FILE=/config/prompt-skill.json
-```
-
-You can also use `WP_SITES_JSON`, but the preferred local workflow is `WP_SITES_FILE` so the `/sites` UI can manage the site registry.
-
-### 3. WordPress site registry
+### 2. WordPress site registry
 
 Sites are stored in [config/wp-sites.json](/config/wp-sites.json).
 
@@ -221,7 +220,7 @@ Optional fields:
 - `label`
 - `default_tags`
 
-### 4. Prompt skill config
+### 3. Prompt skill config
 
 The active prompt skill is stored in [config/prompt-skill.json](/config/prompt-skill.json).
 
@@ -321,7 +320,7 @@ Frontend:
 - `/queue` inspect and run queued tasks
 - `/tasks/[id]` inspect, edit, retry, or delete a task
 - `/sites` manage WordPress site credentials
-- `/skills` manage the active Ollama prompt skill
+- `/skills` manage the active writing prompt skill
 
 Worker:
 - `GET /health`
@@ -329,16 +328,17 @@ Worker:
 
 ## Typical Workflow
 
-1. Start Ollama.
+1. Start Ollama if you are using the Ollama provider.
 2. Run `./setup.sh` if this is a fresh clone.
 3. Start the app with `./run-dev.sh`.
-4. Add one or more sites in `/sites`.
-5. Adjust the writing skill in `/skills` if needed.
-6. Create a task in `/dashboard`.
-7. Open `/queue`.
-8. Click `Generate Draft`.
-9. Review the task result and the generated Markdown artifact.
-10. Open the WordPress draft link if generation succeeded.
+4. Open `/setup` and save your runtime settings, or confirm the existing values.
+5. Add one or more sites in `/sites`.
+6. Adjust the writing skill in `/skills` if needed.
+7. Create a task in `/dashboard`.
+8. Open `/queue`.
+9. Click `Generate Draft`.
+10. Review the task result and the generated Markdown artifact.
+11. Open the WordPress draft link if generation succeeded.
 
 ## Output Artifacts
 
@@ -351,7 +351,7 @@ The artifact contains:
 - partial draft snapshot when available
 - WordPress draft metadata on success
 
-This makes debugging much easier when the local model returns low-quality or malformed output.
+This makes debugging much easier when the active model returns low-quality or malformed output.
 
 ## API Summary
 
@@ -407,15 +407,14 @@ Expected model JSON shape:
 ## Security Notes
 
 This repo stores sensitive local data in files that are intentionally gitignored:
-- `python-worker/.env`
-- `nextjs-app/.env.local`
+- `config/runtime-settings.json`
 - `config/wp-sites.json`
 - `generated-drafts/`
 
 If you open source this repo:
 - do not commit real WordPress credentials
 - do not commit local draft artifacts
-- do not commit local env files
+- do not commit local runtime settings with real secrets
 - do not commit your UI password
 - keep file permissions tight on `config/wp-sites.json`
 

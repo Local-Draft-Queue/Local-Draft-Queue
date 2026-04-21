@@ -266,6 +266,29 @@ textarea {
   margin-top: 18px;
 }
 
+.settings-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-section {
+  display: grid;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.settings-section h3 {
+  margin: 0;
+  font-family: var(--font-display), serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.settings-success {
+  color: var(--success);
+}
+
 .setup-sidebar {
   position: sticky;
   top: 20px;

@@ -20,7 +20,7 @@ const displayFont = Instrument_Serif({
 
 export const metadata: Metadata = {
   title: "Draft Queue MVP",
-  description: "Pipeline dashboard for Ollama to WordPress draft generation.",
+  description: "Pipeline dashboard for AI-assisted WordPress draft generation.",
 };
 
 export default function RootLayout({

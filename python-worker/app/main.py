@@ -19,7 +19,7 @@ async def health() -> HealthResponse:
         settings = get_settings()
         return HealthResponse(
             status="ok",
-            model=settings.ollama_model,
+            model=f"{settings.ai_provider}:{settings.active_model}",
             wordpress_sites=sorted(settings.wp_sites.keys()),
         )
     except SettingsLoadError:

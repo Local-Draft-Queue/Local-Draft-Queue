@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/status-badge";
 import { TaskActions } from "@/components/task-actions";
 import { TaskEditorForm } from "@/components/task-editor-form";
+import { requirePageAuth } from "@/lib/auth-guards";
 import { listSites } from "@/lib/sites";
 import { getTaskById } from "@/lib/tasks";
 
@@ -15,6 +16,7 @@ export default async function TaskDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  await requirePageAuth({ nextPath: `/tasks/${id}` });
   const [task, sites] = await Promise.all([getTaskById(id), listSites()]);
 
   if (!task) {

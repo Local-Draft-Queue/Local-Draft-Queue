@@ -5,12 +5,13 @@ from typing import Optional
 
 import httpx
 
+from app.clients.base import ModelGenerationError
 from app.config import Settings
 from app.models import GenerateDraftRequest, GeneratedDraft
 from app.services.prompt_builder import build_generation_prompt, build_validation_repair_prompt
 
 
-class OllamaGenerationError(RuntimeError):
+class OllamaGenerationError(ModelGenerationError):
     pass
 
 

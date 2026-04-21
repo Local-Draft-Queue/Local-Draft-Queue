@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
+import { ensureApiAuthorized } from "@/lib/auth-guards";
 import { deleteSite, getSiteByKey, updateSite } from "@/lib/sites";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ siteKey: string }> },
 ) {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
+
   const { siteKey } = await params;
   const site = await getSiteByKey(siteKey);
 
@@ -21,6 +27,11 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ siteKey: string }> },
 ) {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
+
   const { siteKey } = await params;
 
   try {
@@ -48,6 +59,11 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ siteKey: string }> },
 ) {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
+
   const { siteKey } = await params;
   const deleted = await deleteSite(siteKey);
 

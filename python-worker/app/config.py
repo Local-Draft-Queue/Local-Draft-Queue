@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ValidationError
 
@@ -10,20 +11,101 @@ from app.models import PromptSkillConfig, WordPressSiteConfig
 
 
 class Settings(BaseModel):
+    ai_provider: Literal["ollama", "openai"]
+    enable_openai_fallback: bool = False
     ollama_base_url: str
     ollama_model: str
+    openai_api_key: str = ""
+    openai_base_url: str
+    openai_model: str
     draft_output_dir: str
     wp_sites: dict[str, WordPressSiteConfig]
     prompt_skill: PromptSkillConfig
+
+    @property
+    def active_model(self) -> str:
+        if self.ai_provider == "openai":
+            return self.openai_model
+        return self.ollama_model
 
 
 class SettingsLoadError(RuntimeError):
     pass
 
 
-DEFAULT_WP_SITES_FILE = Path(__file__).resolve().parents[2] / "config" / "wp-sites.json"
-DEFAULT_DRAFT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "generated-drafts"
-DEFAULT_PROMPT_SKILL_FILE = Path(__file__).resolve().parents[2] / "config" / "prompt-skill.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_RUNTIME_SETTINGS_FILE = PROJECT_ROOT / "config" / "runtime-settings.json"
+DEFAULT_WP_SITES_FILE = PROJECT_ROOT / "config" / "wp-sites.json"
+DEFAULT_DRAFT_OUTPUT_DIR = PROJECT_ROOT / "generated-drafts"
+DEFAULT_PROMPT_SKILL_FILE = PROJECT_ROOT / "config" / "prompt-skill.json"
+DEFAULT_WP_SITES_PATH = "config/wp-sites.json"
+DEFAULT_DRAFT_OUTPUT_DIR_PATH = "generated-drafts"
+DEFAULT_PROMPT_SKILL_FILE_PATH = "config/prompt-skill.json"
+
+LEGACY_PATH_MIGRATIONS = {
+    "/config/wp-sites.json": DEFAULT_WP_SITES_PATH,
+    "/generated-drafts": DEFAULT_DRAFT_OUTPUT_DIR_PATH,
+    "/prompt-skill.json": DEFAULT_PROMPT_SKILL_FILE_PATH,
+    "/config/prompt-skill.json": DEFAULT_PROMPT_SKILL_FILE_PATH,
+}
+
+
+def _parse_bool(raw_value: str | None) -> bool:
+    return (raw_value or "").strip().lower() == "true"
+
+
+def _normalize_stored_path(raw_value: str | None, fallback: str) -> str:
+    trimmed = (raw_value or "").strip()
+    if not trimmed:
+        return fallback
+
+    migrated = LEGACY_PATH_MIGRATIONS.get(trimmed)
+    if migrated:
+        return migrated
+
+    candidate = Path(trimmed)
+    if candidate.is_absolute():
+        try:
+            relative_path = candidate.relative_to(PROJECT_ROOT)
+        except ValueError:
+            return str(candidate)
+        return relative_path.as_posix()
+
+    return Path(trimmed).as_posix()
+
+
+def _resolve_project_path(raw_value: str | None, fallback: str) -> Path:
+    normalized = _normalize_stored_path(raw_value, fallback)
+    candidate = Path(normalized)
+    if candidate.is_absolute():
+        return candidate
+    return PROJECT_ROOT / candidate
+
+
+def _load_runtime_settings() -> dict:
+    raw_file = os.getenv("RUNTIME_SETTINGS_FILE", "").strip()
+    file_path = Path(raw_file) if raw_file else DEFAULT_RUNTIME_SETTINGS_FILE
+
+    if not file_path.exists():
+        return {}
+
+    try:
+        raw_file_contents = file_path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise SettingsLoadError(f"Unable to read runtime settings file: {file_path}") from exc
+
+    if not raw_file_contents:
+        return {}
+
+    try:
+        parsed = json.loads(raw_file_contents)
+    except json.JSONDecodeError as exc:
+        raise SettingsLoadError("Runtime settings file is not valid JSON.") from exc
+
+    if not isinstance(parsed, dict):
+        raise SettingsLoadError("Runtime settings file must contain a JSON object.")
+
+    return parsed
 
 
 def _parse_wp_sites(raw_value: str) -> dict[str, WordPressSiteConfig]:
@@ -46,13 +128,13 @@ def _parse_wp_sites(raw_value: str) -> dict[str, WordPressSiteConfig]:
     return normalized
 
 
-def _load_wp_sites() -> dict[str, WordPressSiteConfig]:
+def _load_wp_sites(runtime_settings: dict) -> dict[str, WordPressSiteConfig]:
     raw_wp_sites = os.getenv("WP_SITES_JSON", "").strip()
     if raw_wp_sites:
         return _parse_wp_sites(raw_wp_sites)
 
-    raw_file = os.getenv("WP_SITES_FILE", "").strip()
-    file_path = Path(raw_file) if raw_file else DEFAULT_WP_SITES_FILE
+    raw_file = str(runtime_settings.get("wpSitesFile", "")).strip() or os.getenv("WP_SITES_FILE", "").strip()
+    file_path = _resolve_project_path(raw_file, DEFAULT_WP_SITES_PATH)
 
     if not file_path.exists():
         raise SettingsLoadError(
@@ -70,9 +152,9 @@ def _load_wp_sites() -> dict[str, WordPressSiteConfig]:
     return _parse_wp_sites(raw_file_contents)
 
 
-def _load_prompt_skill() -> PromptSkillConfig:
-    raw_file = os.getenv("PROMPT_SKILL_FILE", "").strip()
-    file_path = Path(raw_file) if raw_file else DEFAULT_PROMPT_SKILL_FILE
+def _load_prompt_skill(runtime_settings: dict) -> PromptSkillConfig:
+    raw_file = str(runtime_settings.get("promptSkillFile", "")).strip() or os.getenv("PROMPT_SKILL_FILE", "").strip()
+    file_path = _resolve_project_path(raw_file, DEFAULT_PROMPT_SKILL_FILE_PATH)
 
     if not file_path.exists():
         raise SettingsLoadError(
@@ -99,21 +181,55 @@ def _load_prompt_skill() -> PromptSkillConfig:
 
 
 def get_settings() -> Settings:
-    wp_sites = _load_wp_sites()
-    prompt_skill = _load_prompt_skill()
+    runtime_settings = _load_runtime_settings()
+    wp_sites = _load_wp_sites(runtime_settings)
+    prompt_skill = _load_prompt_skill(runtime_settings)
 
-    required = {
-        "OLLAMA_BASE_URL": os.getenv("OLLAMA_BASE_URL", "").strip(),
-        "OLLAMA_MODEL": os.getenv("OLLAMA_MODEL", "").strip(),
-    }
-    missing = [key for key, value in required.items() if not value]
-    if missing:
-        raise SettingsLoadError(f"Missing required environment variables: {', '.join(missing)}")
+    ai_provider = str(runtime_settings.get("aiProvider", "")).strip() or os.getenv("AI_PROVIDER", "").strip() or "ollama"
+    if ai_provider not in {"ollama", "openai"}:
+        raise SettingsLoadError("AI provider must be either 'ollama' or 'openai'.")
+
+    ollama_base_url = str(runtime_settings.get("ollamaBaseUrl", "")).strip() or os.getenv("OLLAMA_BASE_URL", "").strip()
+    ollama_model = str(runtime_settings.get("ollamaModel", "")).strip() or os.getenv("OLLAMA_MODEL", "").strip()
+    openai_api_key = str(runtime_settings.get("openAiApiKey", "")).strip() or os.getenv("OPENAI_API_KEY", "").strip()
+    openai_base_url = (
+        str(runtime_settings.get("openAiBaseUrl", "")).strip()
+        or os.getenv("OPENAI_BASE_URL", "").strip()
+        or "https://api.openai.com/v1"
+    )
+    openai_model = (
+        str(runtime_settings.get("openAiModel", "")).strip()
+        or os.getenv("OPENAI_MODEL", "").strip()
+        or "gpt-4o-mini"
+    )
+    enable_openai_fallback = (
+        bool(runtime_settings.get("enableOpenAiFallback"))
+        or _parse_bool(os.getenv("ENABLE_OPENAI_FALLBACK"))
+    )
+
+    if not ollama_base_url:
+        ollama_base_url = "http://localhost:11434"
+    if not ollama_model:
+        ollama_model = "qwen2.5-coder:1.5b"
+
+    if ai_provider == "openai" and not openai_api_key:
+        raise SettingsLoadError("OPENAI_API_KEY is required when the AI provider is set to openai.")
 
     return Settings(
-        ollama_base_url=required["OLLAMA_BASE_URL"].rstrip("/"),
-        ollama_model=required["OLLAMA_MODEL"],
-        draft_output_dir=os.getenv("DRAFT_OUTPUT_DIR", str(DEFAULT_DRAFT_OUTPUT_DIR)).strip(),
+        ai_provider=ai_provider,
+        enable_openai_fallback=enable_openai_fallback,
+        ollama_base_url=ollama_base_url.rstrip("/"),
+        ollama_model=ollama_model,
+        openai_api_key=openai_api_key,
+        openai_base_url=openai_base_url.rstrip("/"),
+        openai_model=openai_model,
+        draft_output_dir=str(
+            _resolve_project_path(
+                str(runtime_settings.get("draftOutputDir", "")).strip()
+                or os.getenv("DRAFT_OUTPUT_DIR", "").strip(),
+                DEFAULT_DRAFT_OUTPUT_DIR_PATH,
+            )
+        ),
         wp_sites=wp_sites,
         prompt_skill=prompt_skill,
     )

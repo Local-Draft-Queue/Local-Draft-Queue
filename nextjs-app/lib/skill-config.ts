@@ -1,10 +1,9 @@
 import { mkdir, readFile, rename, writeFile } from "fs/promises";
 import path from "path";
 
+import { getResolvedRuntimeConfig } from "@/lib/runtime-config";
 import { promptSkillSchema } from "@/lib/schemas";
 import type { PromptSkillConfig } from "@/types/skill";
-
-const SKILL_FILE = path.join(process.cwd(), "..", "config", "prompt-skill.json");
 
 const DEFAULT_SKILL: PromptSkillConfig = {
   name: "Default SEO Blog Skill",
@@ -37,12 +36,17 @@ const DEFAULT_SKILL: PromptSkillConfig = {
 
 let writeQueue: Promise<unknown> = Promise.resolve();
 
-async function ensureSkillFile(): Promise<void> {
-  await mkdir(path.dirname(SKILL_FILE), { recursive: true });
+async function getSkillFile(): Promise<string> {
+  const config = await getResolvedRuntimeConfig();
+  return config.promptSkillFile;
+}
+
+async function ensureSkillFile(filePath: string): Promise<void> {
+  await mkdir(path.dirname(filePath), { recursive: true });
   try {
-    await readFile(SKILL_FILE, "utf8");
+    await readFile(filePath, "utf8");
   } catch {
-    await writeFile(SKILL_FILE, JSON.stringify(DEFAULT_SKILL, null, 2), "utf8");
+    await writeFile(filePath, JSON.stringify(DEFAULT_SKILL, null, 2), "utf8");
   }
 }
 
@@ -56,8 +60,9 @@ function queueWrite<T>(work: () => Promise<T>): Promise<T> {
 }
 
 export async function getPromptSkill(): Promise<PromptSkillConfig> {
-  await ensureSkillFile();
-  const raw = await readFile(SKILL_FILE, "utf8");
+  const skillFile = await getSkillFile();
+  await ensureSkillFile(skillFile);
+  const raw = await readFile(skillFile, "utf8");
   const parsed = JSON.parse(raw) as unknown;
   return promptSkillSchema.parse(parsed);
 }
@@ -66,10 +71,11 @@ export async function savePromptSkill(input: unknown): Promise<PromptSkillConfig
   const parsed = promptSkillSchema.parse(input);
 
   return queueWrite(async () => {
-    await ensureSkillFile();
-    const tempFile = `${SKILL_FILE}.${Date.now()}.tmp`;
+    const skillFile = await getSkillFile();
+    await ensureSkillFile(skillFile);
+    const tempFile = `${skillFile}.${Date.now()}.tmp`;
     await writeFile(tempFile, JSON.stringify(parsed, null, 2), "utf8");
-    await rename(tempFile, SKILL_FILE);
+    await rename(tempFile, skillFile);
     return parsed;
   });
 }

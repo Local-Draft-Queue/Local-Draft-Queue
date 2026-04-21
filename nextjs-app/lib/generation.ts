@@ -1,4 +1,5 @@
 import { createTaskSchema, workerDraftResponseSchema } from "@/lib/schemas";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import { getTaskById, updateTask } from "@/lib/tasks";
 import type { BlogTask, CreateTaskInput, WorkerDraftRequest, WorkerDraftResponse } from "@/types/task";
 
@@ -11,8 +12,9 @@ class WorkerRequestError extends Error {
   }
 }
 
-function getPythonServiceUrl(): string {
-  const serviceUrl = process.env.PYTHON_SERVICE_URL?.trim();
+async function getPythonServiceUrl(): Promise<string> {
+  const config = await getRuntimeConfig();
+  const serviceUrl = config.pythonServiceUrl.trim();
   if (!serviceUrl) {
     throw new WorkerRequestError("PYTHON_SERVICE_URL is not configured.", 500);
   }
@@ -47,7 +49,7 @@ async function requestDraftGeneration(task: BlogTask): Promise<WorkerDraftRespon
     notes: task.notes || undefined,
   };
 
-  const response = await fetch(`${getPythonServiceUrl()}/generate-draft`, {
+  const response = await fetch(`${await getPythonServiceUrl()}/generate-draft`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

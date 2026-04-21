@@ -79,7 +79,7 @@ export function SkillManager({ initialSkill }: SkillManagerProps) {
       <div className="dashboard-grid">
         <section className="hero-copy">
           <p className="eyebrow">Prompt Skill</p>
-          <h2>Control the Ollama writing skill from the UI.</h2>
+          <h2>Control the writing skill from the UI.</h2>
           <p>
             This config is shared by the Next.js app and the Python worker. Update the
             active instructions here instead of editing Python source files.
@@ -138,7 +138,7 @@ export function SkillManager({ initialSkill }: SkillManagerProps) {
               className="skill-textarea"
               value={form.instructions}
               onChange={(event) => updateField("instructions", event.target.value)}
-              placeholder="Write the skill instructions that should be injected into the Ollama prompt."
+              placeholder="Write the skill instructions that should be injected into the active generation prompt."
               required
             />
           </label>

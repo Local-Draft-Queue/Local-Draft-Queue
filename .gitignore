@@ -10,4 +10,5 @@ python-worker/app/clients/__pycache__
 python-worker/app/services/__pycache__
 *.pyc
 config/wp-sites.json
+config/runtime-settings.json
 generated-drafts/

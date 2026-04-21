@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FormEvent } from "react";
 import { useState, useTransition } from "react";
@@ -83,7 +84,8 @@ export function LoginForm({ authConfigured }: LoginFormProps) {
 
       {!authConfigured ? (
         <p className="inline-error">
-          `UI_AUTH_PASSWORD` is missing from `nextjs-app/.env.local`.
+          No UI password is configured yet. Open the <Link href="/setup">setup page</Link> to
+          create the local admin password first.
         </p>
       ) : null}
 

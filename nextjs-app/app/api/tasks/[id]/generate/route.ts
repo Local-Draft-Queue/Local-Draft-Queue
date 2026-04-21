@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 
+import { ensureApiAuthorized } from "@/lib/auth-guards";
 import { WorkerRequestError, generateDraftForTask } from "@/lib/generation";
 
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
+
   const { id } = await params;
 
   try {

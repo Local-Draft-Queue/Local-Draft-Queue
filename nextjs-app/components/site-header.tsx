@@ -1,13 +1,10 @@
-"use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import { LogoutButton } from "@/components/logout-button";
+import { getAuthState } from "@/lib/auth-guards";
 
-export function SiteHeader() {
-  const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
+export async function SiteHeader() {
+  const { authenticated } = await getAuthState();
 
   return (
     <header className="site-header">
@@ -15,14 +12,19 @@ export function SiteHeader() {
         <p className="eyebrow">Publishing Ops</p>
         <h1>Local Draft Queue</h1>
       </div>
-      {isLoginPage ? null : (
+      {authenticated ? (
         <nav>
           <Link href="/dashboard">Dashboard</Link>
           <Link href="/queue">Queue</Link>
           <Link href="/sites">Sites</Link>
           <Link href="/skills">Skills</Link>
-          <Link href="/setup">Setup</Link>
+          <Link href="/setup">Settings</Link>
           <LogoutButton />
+        </nav>
+      ) : (
+        <nav>
+          <Link href="/setup">Setup</Link>
+          <Link href="/login">Login</Link>
         </nav>
       )}
     </header>

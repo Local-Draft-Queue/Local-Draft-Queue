@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
+import { ensureApiAuthorized } from "@/lib/auth-guards";
 import { normalizeCreateTaskInput } from "@/lib/generation";
 import { getSiteByKey } from "@/lib/sites";
 import { deleteTask, getTaskById, replaceTaskInput } from "@/lib/tasks";
@@ -9,6 +10,11 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
+
   const { id } = await params;
   const task = await getTaskById(id);
 
@@ -23,6 +29,11 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
+
   const { id } = await params;
 
   try {
@@ -58,6 +69,11 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
+
   const { id } = await params;
   const deleted = await deleteTask(id);
 

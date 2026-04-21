@@ -1,14 +1,24 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
+import { ensureApiAuthorized } from "@/lib/auth-guards";
 import { listSites, saveSite } from "@/lib/sites";
 
 export async function GET() {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
   const sites = await listSites();
   return NextResponse.json({ sites });
 }
 
 export async function POST(request: Request) {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
+
   try {
     const body = await request.json();
     const site = await saveSite(body);

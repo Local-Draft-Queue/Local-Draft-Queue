@@ -15,7 +15,7 @@ const loginSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!isUiAuthConfigured()) {
+  if (!(await isUiAuthConfigured())) {
     return NextResponse.json(
       { error: "UI_AUTH_PASSWORD is not configured." },
       { status: 500 },
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const input = loginSchema.parse(body);
 
-    if (!isValidPasswordAttempt(input.password)) {
+    if (!(await isValidPasswordAttempt(input.password))) {
       return NextResponse.json({ error: "Invalid password." }, { status: 401 });
     }
 

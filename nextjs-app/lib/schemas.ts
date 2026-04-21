@@ -53,3 +53,28 @@ export const promptSkillSchema = z.object({
   description: z.string().trim().optional().default(""),
   instructions: z.string().trim().min(1, "Skill instructions are required."),
 });
+
+export const runtimeConfigSchema = z
+  .object({
+    uiAuthPassword: z.string().trim().default(""),
+    pythonServiceUrl: z.string().trim().url("Python worker URL must be a valid URL."),
+    aiProvider: z.enum(["ollama", "openai"]),
+    enableOpenAiFallback: z.boolean(),
+    ollamaBaseUrl: z.string().trim().url("Ollama base URL must be a valid URL."),
+    ollamaModel: z.string().trim().min(1, "Ollama model is required."),
+    openAiApiKey: z.string().trim().default(""),
+    openAiBaseUrl: z.string().trim().url("OpenAI base URL must be a valid URL."),
+    openAiModel: z.string().trim().min(1, "OpenAI model is required."),
+    wpSitesFile: z.string().trim().min(1, "WordPress sites file path is required."),
+    draftOutputDir: z.string().trim().min(1, "Draft output directory is required."),
+    promptSkillFile: z.string().trim().min(1, "Prompt skill file path is required."),
+  })
+  .superRefine((config, ctx) => {
+    if ((config.aiProvider === "openai" || config.enableOpenAiFallback) && !config.openAiApiKey.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "OpenAI API key is required when OpenAI is selected or fallback is enabled.",
+        path: ["openAiApiKey"],
+      });
+    }
+  });

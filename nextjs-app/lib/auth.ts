@@ -1,14 +1,17 @@
 import { createHash } from "crypto";
 
+import { getRuntimeConfig } from "@/lib/runtime-config";
+
 export const AUTH_COOKIE_NAME = "ldq_session";
 const AUTH_TOKEN_NAMESPACE = "local-draft-queue";
 
-export function getConfiguredUiPassword(): string {
-  return process.env.UI_AUTH_PASSWORD?.trim() ?? "";
+export async function getConfiguredUiPassword(): Promise<string> {
+  const config = await getRuntimeConfig();
+  return config.uiAuthPassword.trim();
 }
 
-export function isUiAuthConfigured(): boolean {
-  return getConfiguredUiPassword().length > 0;
+export async function isUiAuthConfigured(): Promise<boolean> {
+  return (await getConfiguredUiPassword()).length > 0;
 }
 
 export function createAuthToken(password: string): string {
@@ -17,22 +20,22 @@ export function createAuthToken(password: string): string {
     .digest("base64url");
 }
 
-export function getExpectedAuthToken(): string {
-  const password = getConfiguredUiPassword();
+export async function getExpectedAuthToken(): Promise<string> {
+  const password = await getConfiguredUiPassword();
   return password ? createAuthToken(password) : "";
 }
 
-export function isValidPasswordAttempt(password: string): boolean {
-  const configured = getConfiguredUiPassword();
+export async function isValidPasswordAttempt(password: string): Promise<boolean> {
+  const configured = await getConfiguredUiPassword();
   return Boolean(configured) && password === configured;
 }
 
-export function isValidSessionToken(token: string | undefined): boolean {
+export async function isValidSessionToken(token: string | undefined): Promise<boolean> {
   if (!token) {
     return false;
   }
 
-  const expected = getExpectedAuthToken();
+  const expected = await getExpectedAuthToken();
   return Boolean(expected) && token === expected;
 }
 

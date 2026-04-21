@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "fs/promises";
 import path from "path";
 
+import { getResolvedRuntimeConfig } from "@/lib/runtime-config";
 import { createSiteSchema, updateSiteSchema } from "@/lib/schemas";
 import type { WordPressSite, WordPressSiteUpdateInput } from "@/types/site";
 
@@ -15,30 +16,34 @@ interface StoredWordPressSite {
 
 type SiteStore = Record<string, StoredWordPressSite>;
 
-const SITES_FILE = path.join(process.cwd(), "..", "config", "wp-sites.json");
-
 let writeQueue: Promise<unknown> = Promise.resolve();
 
-async function ensureSitesFile(): Promise<void> {
-  await mkdir(path.dirname(SITES_FILE), { recursive: true });
+async function getSitesFile(): Promise<string> {
+  const config = await getResolvedRuntimeConfig();
+  return config.wpSitesFile;
+}
+
+async function ensureSitesFile(filePath: string): Promise<void> {
+  await mkdir(path.dirname(filePath), { recursive: true });
   try {
-    await readFile(SITES_FILE, "utf8");
+    await readFile(filePath, "utf8");
   } catch {
-    await writeFile(SITES_FILE, JSON.stringify({}, null, 2), "utf8");
+    await writeFile(filePath, JSON.stringify({}, null, 2), "utf8");
   }
 }
 
 async function readSitesStore(): Promise<SiteStore> {
-  await ensureSitesFile();
-  const raw = await readFile(SITES_FILE, "utf8");
+  const sitesFile = await getSitesFile();
+  await ensureSitesFile(sitesFile);
+  const raw = await readFile(sitesFile, "utf8");
   const parsed = JSON.parse(raw) as SiteStore;
   return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
 }
 
-async function writeSitesStore(store: SiteStore): Promise<void> {
-  const tempFile = `${SITES_FILE}.${Date.now()}.tmp`;
+async function writeSitesStore(store: SiteStore, filePath: string): Promise<void> {
+  const tempFile = `${filePath}.${Date.now()}.tmp`;
   await writeFile(tempFile, JSON.stringify(store, null, 2), "utf8");
-  await rename(tempFile, SITES_FILE);
+  await rename(tempFile, filePath);
 }
 
 function queueWrite<T>(work: () => Promise<T>): Promise<T> {
@@ -81,6 +86,7 @@ export async function saveSite(input: unknown): Promise<WordPressSite> {
     .filter(Boolean);
 
   return queueWrite(async () => {
+    const sitesFile = await getSitesFile();
     const store = await readSitesStore();
     store[parsed.siteKey] = {
       label: parsed.label.trim() || parsed.siteKey,
@@ -90,7 +96,7 @@ export async function saveSite(input: unknown): Promise<WordPressSite> {
       category_id: parsed.categoryId,
       default_tags: Array.from(new Set(normalizedTags)),
     };
-    await writeSitesStore(store);
+    await writeSitesStore(store, sitesFile);
     return toPublicSite(parsed.siteKey, store[parsed.siteKey]);
   });
 }
@@ -102,6 +108,7 @@ export async function updateSite(siteKey: string, input: unknown): Promise<WordP
     .filter(Boolean);
 
   return queueWrite(async () => {
+    const sitesFile = await getSitesFile();
     const store = await readSitesStore();
     const existing = store[siteKey];
     if (!existing) {
@@ -117,20 +124,21 @@ export async function updateSite(siteKey: string, input: unknown): Promise<WordP
       default_tags: Array.from(new Set(normalizedTags)),
     };
 
-    await writeSitesStore(store);
+    await writeSitesStore(store, sitesFile);
     return toPublicSite(siteKey, store[siteKey]);
   });
 }
 
 export async function deleteSite(siteKey: string): Promise<boolean> {
   return queueWrite(async () => {
+    const sitesFile = await getSitesFile();
     const store = await readSitesStore();
     if (!store[siteKey]) {
       return false;
     }
 
     delete store[siteKey];
-    await writeSitesStore(store);
+    await writeSitesStore(store, sitesFile);
     return true;
   });
 }

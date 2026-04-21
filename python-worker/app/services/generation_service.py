@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Optional
 
+from app.clients.base import DraftModelClient, ModelGenerationError
 from app.clients.ollama import OllamaClient
+from app.clients.openai import OpenAIClient
 from app.clients.wordpress import WordPressClient
 from app.config import Settings
 from app.models import GenerateDraftRequest, GenerateDraftResponse, GeneratedDraft
@@ -15,32 +17,66 @@ class DraftGenerationService:
     def __init__(self, settings: Settings):
         self._settings = settings
 
+    def _build_model_clients(self) -> list[DraftModelClient]:
+        if self._settings.ai_provider == "openai":
+            return [OpenAIClient(self._settings)]
+
+        clients: list[DraftModelClient] = [OllamaClient(self._settings)]
+        if self._settings.enable_openai_fallback and self._settings.openai_api_key.strip():
+            clients.append(OpenAIClient(self._settings))
+        return clients
+
+    async def _generate_validated_draft(
+        self,
+        client: DraftModelClient,
+        task: GenerateDraftRequest,
+    ) -> tuple[GeneratedDraft, GeneratedDraft]:
+        generated = await client.generate_draft(task)
+        generated_snapshot = generated
+
+        try:
+            validated = validate_generated_draft(task, generated)
+        except DraftValidationError as exc:
+            repaired = await client.repair_draft(task, generated, exc.errors)
+            generated_snapshot = repaired
+
+            try:
+                validated = validate_generated_draft(task, repaired)
+            except DraftValidationError:
+                expanded = expand_short_draft(task, repaired)
+                generated_snapshot = expanded
+
+                try:
+                    validated = validate_generated_draft(task, expanded)
+                except DraftValidationError as final_exc:
+                    raise ModelGenerationError(
+                        f"Generated draft did not pass validation: {'; '.join(final_exc.errors)}"
+                    ) from final_exc
+
+        return validated, generated_snapshot
+
     async def run(self, task: GenerateDraftRequest) -> GenerateDraftResponse:
-        ollama: Optional[OllamaClient] = None
+        model_clients: list[DraftModelClient] = []
         wordpress: Optional[WordPressClient] = None
         draft_writer = MarkdownArtifactWriter(self._settings)
         generated_snapshot: Optional[GeneratedDraft] = None
         artifact_path: Optional[str] = None
+        generation_errors: list[str] = []
 
         try:
-            ollama = OllamaClient(self._settings)
+            model_clients = self._build_model_clients()
             wordpress = WordPressClient(self._settings)
+            validated: Optional[GeneratedDraft] = None
 
-            generated = await ollama.generate_draft(task)
-            generated_snapshot = generated
-
-            try:
-                validated = validate_generated_draft(task, generated)
-            except DraftValidationError as exc:
-                repaired = await ollama.repair_draft(task, generated, exc.errors)
-                generated_snapshot = repaired
-
+            for client in model_clients:
                 try:
-                    validated = validate_generated_draft(task, repaired)
-                except DraftValidationError as repair_exc:
-                    expanded = expand_short_draft(task, repaired)
-                    generated_snapshot = expanded
-                    validated = validate_generated_draft(task, expanded)
+                    validated, generated_snapshot = await self._generate_validated_draft(client, task)
+                    break
+                except ModelGenerationError as exc:
+                    generation_errors.append(str(exc))
+
+            if validated is None:
+                raise RuntimeError(" | ".join(generation_errors) or "No model client could generate a valid draft.")
 
             generated_snapshot = validated
             artifact_path = await draft_writer.write_success(task, validated)
@@ -64,7 +100,7 @@ class DraftGenerationService:
                 error_message=str(exc),
             )
         finally:
-            if ollama is not None:
-                await ollama.close()
+            for client in model_clients:
+                await client.close()
             if wordpress is not None:
                 await wordpress.close()

@@ -1,10 +1,20 @@
+import { redirect } from "next/navigation";
+
 import { LoginForm } from "@/components/login-form";
 import { isUiAuthConfigured } from "@/lib/auth";
+import { getAuthState } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
-export default function LoginPage() {
-  const authConfigured = isUiAuthConfigured();
+export default async function LoginPage() {
+  const [{ configured, authenticated }, authConfigured] = await Promise.all([
+    getAuthState(),
+    isUiAuthConfigured(),
+  ]);
+
+  if (configured && authenticated) {
+    redirect("/dashboard");
+  }
 
   return (
     <div className="hero-grid auth-grid">

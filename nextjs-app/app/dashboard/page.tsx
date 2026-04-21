@@ -2,12 +2,14 @@ import Link from "next/link";
 
 import { CreateTaskForm } from "@/components/create-task-form";
 import { TaskTable } from "@/components/task-table";
+import { requirePageAuth } from "@/lib/auth-guards";
 import { listSites } from "@/lib/sites";
 import { listTasks } from "@/lib/tasks";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  await requirePageAuth({ nextPath: "/dashboard" });
   const tasks = await listTasks();
   const sites = await listSites();
   const queued = tasks.filter((task) => task.status === "queued").length;
@@ -21,7 +23,8 @@ export default async function DashboardPage() {
         <h2>Queue local AI drafts before they touch WordPress.</h2>
         <p>
           This MVP routes a typed task from Next.js into a FastAPI worker, forces
-          strict JSON from Ollama, validates the result, and creates a WordPress draft.
+          strict JSON from the configured model provider, validates the result, and
+          creates a WordPress draft.
         </p>
 
         <div className="hero-stats">

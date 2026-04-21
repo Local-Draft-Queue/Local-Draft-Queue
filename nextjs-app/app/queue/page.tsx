@@ -1,9 +1,11 @@
 import { TaskTable } from "@/components/task-table";
+import { requirePageAuth } from "@/lib/auth-guards";
 import { listTasks } from "@/lib/tasks";
 
 export const dynamic = "force-dynamic";
 
 export default async function QueuePage() {
+  await requirePageAuth({ nextPath: "/queue" });
   const tasks = await listTasks();
 
   return (

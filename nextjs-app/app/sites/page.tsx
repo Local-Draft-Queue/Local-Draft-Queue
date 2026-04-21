@@ -1,9 +1,11 @@
 import { SitesManager } from "@/components/sites-manager";
+import { requirePageAuth } from "@/lib/auth-guards";
 import { listSites } from "@/lib/sites";
 
 export const dynamic = "force-dynamic";
 
 export default async function SitesPage() {
+  await requirePageAuth({ nextPath: "/sites" });
   const sites = await listSites();
 
   return (

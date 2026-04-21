@@ -1,16 +1,26 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
+import { ensureApiAuthorized } from "@/lib/auth-guards";
 import { normalizeCreateTaskInput } from "@/lib/generation";
 import { getSiteByKey } from "@/lib/sites";
 import { createTask, listTasks } from "@/lib/tasks";
 
 export async function GET() {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
   const tasks = await listTasks();
   return NextResponse.json({ tasks });
 }
 
 export async function POST(request: Request) {
+  const authResponse = await ensureApiAuthorized();
+  if (authResponse) {
+    return authResponse;
+  }
+
   try {
     const body = await request.json();
     const input = normalizeCreateTaskInput(body);
