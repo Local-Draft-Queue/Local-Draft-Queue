@@ -102,6 +102,7 @@ def validate_generated_draft(task: GenerateDraftRequest, draft: GeneratedDraft) 
     errors: list[str] = []
     normalized = normalize_generated_draft(task, draft)
     visible_content = strip_html(normalized.content_html)
+    h2_count = len(re.findall(r"<h2\b", normalized.content_html, flags=re.IGNORECASE))
     combined_text = " ".join(
         [
             normalized.title,
@@ -117,10 +118,10 @@ def validate_generated_draft(task: GenerateDraftRequest, draft: GeneratedDraft) 
         errors.append("Generated draft is missing title.")
     if not normalized.excerpt:
         errors.append("Generated draft is missing excerpt.")
-    if word_count(visible_content) < 700:
-        errors.append("Generated content must be at least 700 words.")
-    if "<h2" not in normalized.content_html.lower():
-        errors.append("Generated content must contain at least one <h2> heading.")
+    if word_count(visible_content) < 900:
+        errors.append("Generated content must be at least 900 words.")
+    if h2_count < 3:
+        errors.append("Generated content must contain at least three <h2> headings.")
     if keyword not in combined_text:
         errors.append("Target keyword was not included in the generated draft.")
 

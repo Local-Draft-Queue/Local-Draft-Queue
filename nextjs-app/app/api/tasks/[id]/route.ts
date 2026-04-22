@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 import { ensureApiAuthorized } from "@/lib/auth-guards";
 import { normalizeCreateTaskInput } from "@/lib/generation";
 import { getSiteByKey } from "@/lib/sites";
-import { deleteTask, getTaskById, replaceTaskInput } from "@/lib/tasks";
+import { deleteTask, getTaskById, replaceTaskInput, TaskStateConflictError } from "@/lib/tasks";
 
 export async function GET(
   _request: Request,
@@ -54,6 +54,10 @@ export async function PUT(
 
     return NextResponse.json({ task });
   } catch (error) {
+    if (error instanceof TaskStateConflictError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
     if (error instanceof ZodError) {
       return NextResponse.json(
         { error: error.issues[0]?.message ?? "Invalid task payload." },
@@ -75,11 +79,19 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const deleted = await deleteTask(id);
+  try {
+    const deleted = await deleteTask(id);
 
-  if (!deleted) {
-    return NextResponse.json({ error: "Task not found." }, { status: 404 });
+    if (!deleted) {
+      return NextResponse.json({ error: "Task not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    if (error instanceof TaskStateConflictError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
+    return NextResponse.json({ error: "Unable to delete task." }, { status: 500 });
   }
-
-  return NextResponse.json({ ok: true });
 }

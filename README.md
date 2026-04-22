@@ -307,6 +307,7 @@ cd
 What the script does:
 - stops processes already using ports `8000`, `3000`, and `3001`
 - clears stale Next.js build cache
+- loads `python-worker/.env` only if it exists
 - starts the FastAPI worker
 - starts the Next.js dev server
 
@@ -316,12 +317,16 @@ Worker:
 
 ```bash
 cd /python-worker
-set -a
-source .env
-set +a
+if [ -f .env ]; then
+  set -a
+  source .env
+  set +a
+fi
 source .venv/bin/activate
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
+
+If `.env` is missing, the worker falls back to `config/runtime-settings.json` and any ambient environment variables.
 
 Frontend:
 

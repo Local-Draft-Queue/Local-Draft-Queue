@@ -15,6 +15,7 @@ interface TaskEditorFormProps {
 
 export function TaskEditorForm({ task, sites }: TaskEditorFormProps) {
   const router = useRouter();
+  const isGenerationLocked = task.status === "generating";
   const [form, setForm] = useState({
     siteKey: task.siteKey,
     titleHint: task.titleHint,
@@ -34,6 +35,9 @@ export function TaskEditorForm({ task, sites }: TaskEditorFormProps) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isGenerationLocked) {
+      return;
+    }
     setConfirmOpen(true);
   }
 
@@ -72,7 +76,7 @@ export function TaskEditorForm({ task, sites }: TaskEditorFormProps) {
           value={form.siteKey}
           onChange={(event) => updateField("siteKey", event.target.value)}
           required
-          disabled={isPending}
+          disabled={isPending || isGenerationLocked}
         >
           {sites.map((site) => (
             <option key={site.siteKey} value={site.siteKey}>
@@ -88,7 +92,7 @@ export function TaskEditorForm({ task, sites }: TaskEditorFormProps) {
           value={form.titleHint}
           onChange={(event) => updateField("titleHint", event.target.value)}
           required
-          disabled={isPending}
+          disabled={isPending || isGenerationLocked}
         />
       </label>
 
@@ -98,7 +102,7 @@ export function TaskEditorForm({ task, sites }: TaskEditorFormProps) {
           value={form.targetKeyword}
           onChange={(event) => updateField("targetKeyword", event.target.value)}
           required
-          disabled={isPending}
+          disabled={isPending || isGenerationLocked}
         />
       </label>
 
@@ -108,17 +112,25 @@ export function TaskEditorForm({ task, sites }: TaskEditorFormProps) {
           value={form.notes}
           onChange={(event) => updateField("notes", event.target.value)}
           rows={7}
-          disabled={isPending}
+          disabled={isPending || isGenerationLocked}
         />
       </label>
 
       <div className="form-footer">
-        <button className="action-button action-button-solid" type="submit" disabled={isPending}>
+        <button
+          className="action-button action-button-solid"
+          type="submit"
+          disabled={isPending || isGenerationLocked}
+        >
           {isPending ? "Saving..." : "Update Task"}
         </button>
         {error ? <p className="inline-error">{error}</p> : null}
       </div>
-        <p className="muted">Updating a task resets it to `queued` and clears previous draft results.</p>
+        <p className="muted">
+          {isGenerationLocked
+            ? "Task inputs are locked while generation is in progress."
+            : "Updating a task resets it to `queued` and clears previous draft results."}
+        </p>
       </form>
 
       <ConfirmModal

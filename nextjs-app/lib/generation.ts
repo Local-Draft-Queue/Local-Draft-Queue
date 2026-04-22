@@ -1,6 +1,6 @@
 import { createTaskSchema, workerDraftResponseSchema } from "@/lib/schemas";
 import { getRuntimeConfig } from "@/lib/runtime-config";
-import { getTaskById, updateTask } from "@/lib/tasks";
+import { startTaskGeneration, updateTask } from "@/lib/tasks";
 import type { BlogTask, CreateTaskInput, WorkerDraftRequest, WorkerDraftResponse } from "@/types/task";
 
 class WorkerRequestError extends Error {
@@ -82,16 +82,7 @@ async function requestDraftGeneration(task: BlogTask): Promise<WorkerDraftRespon
 }
 
 export async function generateDraftForTask(taskId: string): Promise<BlogTask> {
-  const task = await getTaskById(taskId);
-  if (!task) {
-    throw new WorkerRequestError("Task not found.", 404);
-  }
-
-  const markedGenerating = await updateTask(taskId, (current) => ({
-    ...current,
-    status: "generating",
-    errorMessage: "",
-  }));
+  const markedGenerating = await startTaskGeneration(taskId);
 
   if (!markedGenerating) {
     throw new WorkerRequestError("Task not found.", 404);

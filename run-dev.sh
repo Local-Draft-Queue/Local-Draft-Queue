@@ -51,12 +51,6 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-if [[ ! -f "$PYTHON_ENV_FILE" ]]; then
-  echo "Missing $PYTHON_ENV_FILE"
-  echo "Create the worker env file before starting the stack."
-  exit 1
-fi
-
 if [[ ! -x "$PYTHON_VENV_DIR/bin/uvicorn" ]]; then
   echo "Missing Python worker dependencies in $PYTHON_VENV_DIR"
   echo "Run: cd $PYTHON_DIR && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt"
@@ -79,11 +73,19 @@ if [[ -d "$NEXT_DIR/.next" ]]; then
   rm -rf "$NEXT_DIR/.next" || true
 fi
 
+if [[ -f "$PYTHON_ENV_FILE" ]]; then
+  echo "Loading optional worker env overrides from $PYTHON_ENV_FILE"
+else
+  echo "No $PYTHON_ENV_FILE found; worker will use config/runtime-settings.json and default environment values."
+fi
+
 echo "Starting FastAPI worker on http://127.0.0.1:8000"
 (
-  set -a
-  source "$PYTHON_ENV_FILE"
-  set +a
+  if [[ -f "$PYTHON_ENV_FILE" ]]; then
+    set -a
+    source "$PYTHON_ENV_FILE"
+    set +a
+  fi
   source "$PYTHON_VENV_DIR/bin/activate"
   cd "$PYTHON_DIR"
   exec uvicorn app.main:app --host 127.0.0.1 --port 8000

@@ -30,6 +30,7 @@ export function TaskActions({
 
   const label = task.status === "failed" ? "Retry" : "Generate Draft";
   const disabled = isPending || task.status === "generating" || task.status === "draft_created";
+  const deleteDisabled = isPending || task.status === "generating";
 
   function handleClick() {
     startTransition(() => {
@@ -84,7 +85,7 @@ export function TaskActions({
           className="action-button"
           type="button"
           onClick={() => setDeleteConfirmOpen(true)}
-          disabled={isPending}
+          disabled={deleteDisabled}
         >
           Delete
         </button>

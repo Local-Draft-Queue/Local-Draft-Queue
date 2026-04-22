@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { ensureApiAuthorized } from "@/lib/auth-guards";
 import { WorkerRequestError, generateDraftForTask } from "@/lib/generation";
+import { TaskStateConflictError } from "@/lib/tasks";
 
 export async function POST(
   _request: Request,
@@ -19,6 +20,10 @@ export async function POST(
     const status = task.status === "failed" ? 422 : 200;
     return NextResponse.json({ task }, { status });
   } catch (error) {
+    if (error instanceof TaskStateConflictError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
     if (error instanceof WorkerRequestError) {
       return NextResponse.json({ error: error.message }, { status: error.statusCode });
     }

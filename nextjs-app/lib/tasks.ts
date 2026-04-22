@@ -5,8 +5,11 @@ import path from "path";
 import type { BlogTask, CreateTaskInput, TaskStore } from "@/types/task";
 
 const TASKS_FILE = path.join(process.cwd(), "data", "tasks.json");
+const GENERATABLE_STATUSES = new Set<BlogTask["status"]>(["queued", "failed"]);
 
 let writeQueue: Promise<unknown> = Promise.resolve();
+
+export class TaskStateConflictError extends Error {}
 
 async function ensureStoreFile(): Promise<void> {
   await mkdir(path.dirname(TASKS_FILE), { recursive: true });
@@ -101,23 +104,71 @@ export async function updateTask(
   });
 }
 
+export async function startTaskGeneration(id: string): Promise<BlogTask | null> {
+  return queueWrite(async () => {
+    const store = await readStore();
+    const index = store.tasks.findIndex((task) => task.id === id);
+    if (index === -1) {
+      return null;
+    }
+
+    const existing = store.tasks[index];
+    if (!GENERATABLE_STATUSES.has(existing.status)) {
+      if (existing.status === "generating") {
+        throw new TaskStateConflictError("Task generation is already in progress.");
+      }
+
+      throw new TaskStateConflictError("Only queued or failed tasks can start generation.");
+    }
+
+    const nextTask: BlogTask = {
+      ...existing,
+      status: "generating",
+      errorMessage: "",
+      updatedAt: new Date().toISOString(),
+    };
+
+    store.tasks[index] = nextTask;
+    await writeStore(store);
+    return nextTask;
+  });
+}
+
 export async function replaceTaskInput(
   id: string,
   input: CreateTaskInput,
 ): Promise<BlogTask | null> {
-  return updateTask(id, (existing) => ({
-    ...existing,
-    siteKey: input.siteKey.trim(),
-    titleHint: input.titleHint.trim(),
-    targetKeyword: input.targetKeyword.trim(),
-    notes: input.notes?.trim() ?? "",
-    status: "queued",
-    generatedTitle: "",
-    artifactPath: "",
-    wpPostId: null,
-    wpLink: "",
-    errorMessage: "",
-  }));
+  return queueWrite(async () => {
+    const store = await readStore();
+    const index = store.tasks.findIndex((task) => task.id === id);
+    if (index === -1) {
+      return null;
+    }
+
+    const existing = store.tasks[index];
+    if (existing.status === "generating") {
+      throw new TaskStateConflictError("Task cannot be edited while generation is in progress.");
+    }
+
+    const nextTask: BlogTask = {
+      ...existing,
+      siteKey: input.siteKey.trim(),
+      titleHint: input.titleHint.trim(),
+      targetKeyword: input.targetKeyword.trim(),
+      notes: input.notes?.trim() ?? "",
+      status: "queued",
+      generatedTitle: "",
+      artifactPath: "",
+      wpPostId: null,
+      wpLink: "",
+      errorMessage: "",
+      updatedAt: new Date().toISOString(),
+    };
+
+    store.tasks[index] = nextTask;
+    await writeStore(store);
+    return nextTask;
+  });
 }
 
 export async function deleteTask(id: string): Promise<boolean> {
@@ -126,6 +177,11 @@ export async function deleteTask(id: string): Promise<boolean> {
     const index = store.tasks.findIndex((task) => task.id === id);
     if (index === -1) {
       return false;
+    }
+
+    const existing = store.tasks[index];
+    if (existing.status === "generating") {
+      throw new TaskStateConflictError("Task cannot be deleted while generation is in progress.");
     }
 
     const [removedTask] = store.tasks.splice(index, 1);
