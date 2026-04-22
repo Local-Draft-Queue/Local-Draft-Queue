@@ -8,7 +8,12 @@ import httpx
 from app.clients.base import ModelGenerationError
 from app.config import Settings
 from app.models import GenerateDraftRequest, GeneratedDraft
-from app.services.prompt_builder import build_generation_prompt, build_validation_repair_prompt
+from app.services.prompt_builder import (
+    build_generation_system_prompt,
+    build_generation_user_prompt,
+    build_validation_repair_system_prompt,
+    build_validation_repair_user_prompt,
+)
 
 
 class OllamaGenerationError(ModelGenerationError):
@@ -36,11 +41,12 @@ class OllamaClient:
     async def close(self) -> None:
         await self._client.aclose()
 
-    async def _request_generation(self, prompt: str) -> str:
+    async def _request_generation(self, prompt: str, system_prompt: str) -> str:
         response = await self._client.post(
             f"{self._settings.ollama_base_url}/api/generate",
             json={
                 "model": self._settings.ollama_model,
+                "system": system_prompt,
                 "prompt": prompt,
                 "stream": False,
                 "format": "json",
@@ -64,13 +70,14 @@ class OllamaClient:
         last_error: Optional[Exception] = None
 
         for stronger_retry in (False, True):
-            prompt = build_generation_prompt(
+            system_prompt = build_generation_system_prompt(
                 task,
                 self._settings.prompt_skill,
                 stronger_retry=stronger_retry,
             )
+            prompt = build_generation_user_prompt(task)
             try:
-                raw_text = await self._request_generation(prompt)
+                raw_text = await self._request_generation(prompt, system_prompt)
                 parsed = extract_json_object(raw_text)
                 return GeneratedDraft.model_validate(parsed)
             except (httpx.HTTPError, json.JSONDecodeError, OllamaGenerationError, ValueError) as exc:
@@ -84,14 +91,14 @@ class OllamaClient:
         draft: GeneratedDraft,
         validation_errors: list[str],
     ) -> GeneratedDraft:
-        prompt = build_validation_repair_prompt(
+        system_prompt = build_validation_repair_system_prompt(
             task,
             self._settings.prompt_skill,
-            draft,
             validation_errors,
         )
+        prompt = build_validation_repair_user_prompt(task, draft)
         try:
-            raw_text = await self._request_generation(prompt)
+            raw_text = await self._request_generation(prompt, system_prompt)
             parsed = extract_json_object(raw_text)
             return GeneratedDraft.model_validate(parsed)
         except (httpx.HTTPError, json.JSONDecodeError, OllamaGenerationError, ValueError) as exc:

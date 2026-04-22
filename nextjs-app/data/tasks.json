@@ -1,3 +1,19 @@
 {
-  "tasks": []
+  "tasks": [
+    {
+      "id": "3cabb785-98c5-4bb5-9fdb-644c7a6c59a5",
+      "siteKey": "site-a",
+      "titleHint": "First-Time Storage Rental Tips That Actually Save Money",
+      "targetKeyword": "Storage Rental",
+      "notes": "",
+      "status": "draft_created",
+      "generatedTitle": "Expert Storage Rental Tips for First-Timers: Save Money and Simplify Your Move",
+      "artifactPath": "/Users/jeff/Desktop/dev/auto/generated-drafts/3cabb785-98c5-4bb5-9fdb-644c7a6c59a5.md",
+      "wpPostId": 26067,
+      "wpLink": "https://wowmover.com/?p=26067",
+      "errorMessage": "",
+      "createdAt": "2026-04-22T10:29:36.273Z",
+      "updatedAt": "2026-04-22T10:31:50.239Z"
+    }
+  ]
 }

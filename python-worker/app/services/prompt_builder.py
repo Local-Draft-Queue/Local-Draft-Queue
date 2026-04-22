@@ -4,7 +4,7 @@ from app.models import GenerateDraftRequest, GeneratedDraft, PromptSkillConfig
 from app.services.seo_skill import build_seo_skill_block
 
 
-def build_generation_prompt(
+def build_generation_system_prompt(
     task: GenerateDraftRequest,
     prompt_skill: PromptSkillConfig,
     stronger_retry: bool = False,
@@ -58,20 +58,23 @@ Content rules:
 
 {seo_skill_block}
 
-Task input:
-- site_key: {task.site_key}
-- title_hint: {task.title_hint}
-- target_keyword: {task.target_keyword}
-- notes: {task.notes or "None"}
-
 {retry_block}
 """.strip()
 
 
-def build_validation_repair_prompt(
+def build_generation_user_prompt(task: GenerateDraftRequest) -> str:
+    return f"""
+Generate the draft using this task input:
+- site_key: {task.site_key}
+- title_hint: {task.title_hint}
+- target_keyword: {task.target_keyword}
+- notes: {task.notes or "None"}
+""".strip()
+
+
+def build_validation_repair_system_prompt(
     task: GenerateDraftRequest,
     prompt_skill: PromptSkillConfig,
-    draft: GeneratedDraft,
     validation_errors: list[str],
 ) -> str:
     seo_skill_block = build_seo_skill_block(task, prompt_skill)
@@ -115,8 +118,15 @@ Repair rules:
 - Do not mention being an AI.
 
 {seo_skill_block}
+""".strip()
 
-Task input:
+
+def build_validation_repair_user_prompt(
+    task: GenerateDraftRequest,
+    draft: GeneratedDraft,
+) -> str:
+    return f"""
+Repair the draft using this task input:
 - site_key: {task.site_key}
 - title_hint: {task.title_hint}
 - target_keyword: {task.target_keyword}

@@ -6,7 +6,7 @@ Current pipeline:
 
 `Next.js UI -> Next.js API routes -> FastAPI worker -> selected AI provider -> validation -> local .md artifact -> WordPress draft`
 
-This repo is built around a practical constraint: the default Ollama model is `qwen2.5-coder:1.5b`, which is small, code-oriented, and not consistently reliable for long-form structured writing. The worker compensates for that with strict prompting, JSON extraction, validation, one retry, and deterministic fallback expansion. OpenAI is configured as a separate provider, not as an automatic fallback.
+This repo is built around a practical constraint: the default Ollama model is `qwen2.5-coder:1.5b`, which is small, code-oriented, and not consistently reliable for blog writing or long-form structured content. The worker compensates for that with strict prompting, JSON extraction, validation, one retry, and deterministic fallback expansion, but the default model is still mainly a lightweight local starter. For better blog quality, switch to a stronger model in `/setup`, preferably a higher-capacity Ollama model or OpenAI. OpenAI is configured as a separate provider, not as an automatic fallback.
 
 ## What It Does
 
@@ -19,6 +19,7 @@ This repo is built around a practical constraint: the default Ollama model is `q
 - Strip non-JSON wrapper text if the model adds noise.
 - Validate draft structure and content quality before sending anything to WordPress.
 - Save a local Markdown artifact for each generation attempt.
+- Send the active writing skill as a dedicated instruction layer to the model request and record that skill in the artifact.
 - Create WordPress posts as `draft`, never `publish`.
 
 ## Current Scope
@@ -153,6 +154,8 @@ Default local model:
 qwen2.5-coder:1.5b
 ```
 
+This default is included for easy local setup, not because it is a strong blogging model. If you care about article quality, consistency, and fewer repair passes, use a higher-capacity model instead of `qwen2.5-coder:1.5b`.
+
 Pull it before running:
 
 ```bash
@@ -269,6 +272,7 @@ What it does:
 - installs Next.js dependencies
 - creates missing local env files with placeholder values
 - attempts to pull `qwen2.5-coder:1.5b` if Ollama is installed
+- keeps `qwen2.5-coder:1.5b` as the bootstrap default, but you should switch to a stronger model in `/setup` for real blog generation
 
 It does not overwrite your existing local config files.
 
